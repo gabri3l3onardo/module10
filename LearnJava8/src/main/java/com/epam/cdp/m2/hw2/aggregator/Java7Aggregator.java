@@ -8,7 +8,11 @@ public class Java7Aggregator implements Aggregator {
 
     @Override
     public int sum(List<Integer> numbers) {
-        throw new UnsupportedOperationException();
+        int result = 0;
+        for(int number:numbers) {
+            result += number;
+        }
+        return result;
     }
 
     @Override
