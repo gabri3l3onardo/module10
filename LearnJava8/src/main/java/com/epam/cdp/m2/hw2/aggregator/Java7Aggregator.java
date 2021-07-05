@@ -18,6 +18,18 @@ public class Java7Aggregator implements Aggregator {
         }
     }
 
+    class DuplicatedComparator implements Comparator<String> {
+
+        @Override
+        public int compare(String word1, String word2) {
+            int lengthsComparison = Integer.compare(word1.length(),word2.length());
+            if(lengthsComparison == 0){
+                return word1.compareTo(word2);
+            }
+            return lengthsComparison;
+        }
+    }
+
     @Override
     public int sum(List<Integer> numbers) {
         int result = 0;
@@ -47,6 +59,22 @@ public class Java7Aggregator implements Aggregator {
 
     @Override
     public List<String> getDuplicates(List<String> words, long limit) {
-        throw new UnsupportedOperationException();
+        Map<String, Boolean> mDuplicatedWords = new HashMap<>();
+        for(String word: words) {
+            String upperWord = word.toUpperCase();
+            if(mDuplicatedWords.containsKey(upperWord)) {
+                mDuplicatedWords.put(upperWord, Boolean.TRUE);
+            } else{
+                mDuplicatedWords.put(upperWord, Boolean.FALSE);
+            }
+        }
+        List<String> lstDuplicatedWords = new ArrayList<>();
+        for(Map.Entry<String, Boolean> entry:mDuplicatedWords.entrySet()){
+            if(entry.getValue()){
+                lstDuplicatedWords.add(entry.getKey());
+            }
+        }
+        Collections.sort(lstDuplicatedWords, new DuplicatedComparator());
+        return lstDuplicatedWords.size()<limit?lstDuplicatedWords:lstDuplicatedWords.subList(0,(int)limit);
     }
 }

@@ -1,9 +1,6 @@
 package com.epam.cdp.m2.hw2.aggregator;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.function.BinaryOperator;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -40,6 +37,19 @@ public class Java8ParallelAggregator implements Aggregator {
 
     @Override
     public List<String> getDuplicates(List<String> words, long limit) {
-        throw new UnsupportedOperationException();
+        List<String> lstWordsUppercase = words.parallelStream().map(String::toUpperCase).collect(Collectors.toList());
+        return words.parallelStream()
+                .map(String::toUpperCase)
+                .sorted((word1, word2) -> {
+                    int lengthsComparison = Integer.compare(word1.length(),word2.length());
+                    if(lengthsComparison == 0){
+                        return word1.compareTo(word2);
+                    }
+                    return lengthsComparison;
+                })
+                .filter(word -> Collections.frequency(lstWordsUppercase,word) > 1)
+                .distinct()
+                .limit(limit)
+                .collect(Collectors.toList());
     }
 }

@@ -91,6 +91,51 @@ public class Java7ParallelAggregator implements Aggregator {
         }
     }
 
+    class RecursiveDuplicatedWordTask extends RecursiveTask<Map<String, Boolean>> {
+
+        private List<String> lstWords;
+
+        public RecursiveDuplicatedWordTask(List<String> lstWords) {
+            this.lstWords = lstWords;
+        }
+
+        @Override
+        protected Map<String, Boolean> compute() {
+            if(lstWords.size() > 2) {
+                Map<String, Boolean> mDuplicatedWords = new HashMap<>();
+                List<RecursiveDuplicatedWordTask> lstSublists = (List<RecursiveDuplicatedWordTask>) divideDuplicatedWordTasks();
+                for(RecursiveDuplicatedWordTask recursiveTask:lstSublists){
+                    Map<String, Boolean> mDuplicatedWordsTemp = forkJoinPool.invoke(recursiveTask);
+                    for(Map.Entry<String, Boolean> entry: mDuplicatedWordsTemp.entrySet()) {
+                        mDuplicatedWords.put(entry.getKey(), entry.getValue() || mDuplicatedWords.containsKey(entry.getKey()));
+                    }
+                }
+                return mDuplicatedWords;
+            }
+            return getDuplicated();
+        }
+
+        private Collection<RecursiveDuplicatedWordTask> divideDuplicatedWordTasks() {
+            List<RecursiveDuplicatedWordTask> lstSublists = new ArrayList<>();
+            lstSublists.add(new RecursiveDuplicatedWordTask(lstWords.subList(0,lstWords.size()/2)));
+            lstSublists.add(new RecursiveDuplicatedWordTask(lstWords.subList(lstWords.size()/2, lstWords.size())));
+            return lstSublists;
+        }
+
+        private Map<String, Boolean> getDuplicated() {
+            Map<String, Boolean> mDuplicatedWords = new HashMap<>();
+            for(String word: lstWords) {
+                String upperWord = word.toUpperCase();
+                if(mDuplicatedWords.containsKey(upperWord)) {
+                    mDuplicatedWords.put(upperWord, Boolean.TRUE);
+                } else{
+                    mDuplicatedWords.put(upperWord, Boolean.FALSE);
+                }
+            }
+            return mDuplicatedWords;
+        }
+    }
+
     class MostFrequentWordComparator implements Comparator<Pair<String, Long>> {
 
         @Override
@@ -100,6 +145,18 @@ public class Java7ParallelAggregator implements Aggregator {
                 return pair1.getKey().compareTo(pair2.getKey());
             }
             return freqComparator;
+        }
+    }
+
+    class DuplicatedComparator implements Comparator<String> {
+
+        @Override
+        public int compare(String word1, String word2) {
+            int lengthsComparison = Integer.compare(word1.length(),word2.length());
+            if(lengthsComparison == 0){
+                return word1.compareTo(word2);
+            }
+            return lengthsComparison;
         }
     }
 
@@ -123,6 +180,15 @@ public class Java7ParallelAggregator implements Aggregator {
 
     @Override
     public List<String> getDuplicates(List<String> words, long limit) {
-        throw new UnsupportedOperationException();
+        RecursiveDuplicatedWordTask recursiveDuplicatedWordTask = new RecursiveDuplicatedWordTask(words);
+        Map<String, Boolean> mDuplicatedWords = forkJoinPool.invoke(recursiveDuplicatedWordTask);
+        List<String> lstDuplicatedWords = new ArrayList<>();
+        for(Map.Entry<String, Boolean> entry:mDuplicatedWords.entrySet()){
+            if(entry.getValue()){
+                lstDuplicatedWords.add(entry.getKey());
+            }
+        }
+        Collections.sort(lstDuplicatedWords, new DuplicatedComparator());
+        return lstDuplicatedWords.size()<limit?lstDuplicatedWords:lstDuplicatedWords.subList(0,(int)limit);
     }
 }
