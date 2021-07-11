@@ -5,6 +5,7 @@ import java.util.function.BinaryOperator;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import com.epam.util.PerformanceTest;
 import javafx.util.Pair;
 
 public class Java8ParallelAggregator implements Aggregator {
@@ -20,10 +21,8 @@ public class Java8ParallelAggregator implements Aggregator {
     public List<Pair<String, Long>> getMostFrequentWords(List<String> words, long limit) {
         Function<String, Long> funcFrequency = (word) -> 1L;
         return words.parallelStream()
-                .collect(
-                        Collectors.toMap(Function.identity(), funcFrequency, (freq1, freq2) -> freq1+freq2))
-                .entrySet().parallelStream()
-                .map(entry -> new Pair<String, Long>(entry.getKey(), entry.getValue()))
+                .map(word -> new Pair<String, Long>(word, (long)Collections.frequency(words,word)))
+                .distinct()
                 .sorted((pair1, pair2) -> {
                     int freqComparator = pair2.getValue().compareTo(pair1.getValue());
                     if(freqComparator == 0) {

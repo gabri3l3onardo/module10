@@ -8,7 +8,7 @@ import javafx.util.Pair;
 
 public class Java7ParallelAggregator implements Aggregator {
 
-    public static ForkJoinPool forkJoinPool = new ForkJoinPool(2);
+    public static ForkJoinPool forkJoinPool = new ForkJoinPool(4);
 
     class RecursiveAdditionTask extends RecursiveTask<Integer> {
 
@@ -20,27 +20,30 @@ public class Java7ParallelAggregator implements Aggregator {
 
         @Override
         protected Integer compute() {
-            if(lstNumbers.size() > 2) {
-                int result = 0;
-                List<RecursiveAdditionTask> lstSublists = (List<RecursiveAdditionTask>) divideAdditionTasks();
+            if(this.lstNumbers.size() > 8) {
+                List<RecursiveAdditionTask> lstSublists = new ArrayList<> (divideAdditionTasks());
                 for(RecursiveAdditionTask recursiveTask:lstSublists){
-                    result += forkJoinPool.invoke(recursiveTask);
+                    recursiveTask.fork();
+                }
+                int result = 0;
+                for(RecursiveAdditionTask recursiveTask:lstSublists){
+                    result += recursiveTask.join();
                 }
                 return result;
             }
-            return sum();
+            return recursiveSum();
         }
 
         private Collection<RecursiveAdditionTask> divideAdditionTasks() {
             List<RecursiveAdditionTask> lstSublists = new ArrayList<>();
-            lstSublists.add(new RecursiveAdditionTask(lstNumbers.subList(0,lstNumbers.size()/2)));
-            lstSublists.add(new RecursiveAdditionTask(lstNumbers.subList(lstNumbers.size()/2, lstNumbers.size())));
+            lstSublists.add(new RecursiveAdditionTask(this.lstNumbers.subList(0,this.lstNumbers.size()/2)));
+            lstSublists.add(new RecursiveAdditionTask(this.lstNumbers.subList(this.lstNumbers.size()/2, this.lstNumbers.size())));
             return lstSublists;
         }
 
-        private Integer sum() {
+        private Integer recursiveSum() {
             int result = 0;
-            for(Integer number: lstNumbers){
+            for(Integer number: this.lstNumbers){
                 result += number;
             }
             return result;
@@ -57,11 +60,11 @@ public class Java7ParallelAggregator implements Aggregator {
 
         @Override
         protected Map<String, Long> compute() {
-            if(lstWords.size() > 2) {
+            if(lstWords.size() > 8) {
                 Map<String, Long> mWordsFrequency = new HashMap<>();
                 List<RecursiveWordFrequencyTask> lstSublists = (List<RecursiveWordFrequencyTask>) divideWordFrequencyTasks();
                 for(RecursiveWordFrequencyTask recursiveTask:lstSublists){
-                    Map<String, Long> mWordsFrequencyTemp = forkJoinPool.invoke(recursiveTask);
+                    Map<String, Long> mWordsFrequencyTemp = recursiveTask.invoke();
                     for(Map.Entry<String, Long> entry: mWordsFrequencyTemp.entrySet()) {
                         mWordsFrequency.put(entry.getKey(), entry.getValue() + (mWordsFrequency.containsKey(entry.getKey())?mWordsFrequency.get(entry.getKey()):0));
                     }
@@ -101,11 +104,11 @@ public class Java7ParallelAggregator implements Aggregator {
 
         @Override
         protected Map<String, Boolean> compute() {
-            if(lstWords.size() > 2) {
+            if(lstWords.size() > 8) {
                 Map<String, Boolean> mDuplicatedWords = new HashMap<>();
                 List<RecursiveDuplicatedWordTask> lstSublists = (List<RecursiveDuplicatedWordTask>) divideDuplicatedWordTasks();
                 for(RecursiveDuplicatedWordTask recursiveTask:lstSublists){
-                    Map<String, Boolean> mDuplicatedWordsTemp = forkJoinPool.invoke(recursiveTask);
+                    Map<String, Boolean> mDuplicatedWordsTemp = recursiveTask.invoke();
                     for(Map.Entry<String, Boolean> entry: mDuplicatedWordsTemp.entrySet()) {
                         mDuplicatedWords.put(entry.getKey(), entry.getValue() || mDuplicatedWords.containsKey(entry.getKey()));
                     }

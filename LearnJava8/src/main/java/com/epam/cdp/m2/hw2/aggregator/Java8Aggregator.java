@@ -5,6 +5,7 @@ import java.util.function.BinaryOperator;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import com.epam.util.PerformanceTest;
 import javafx.util.Pair;
 
 public class Java8Aggregator implements Aggregator {
